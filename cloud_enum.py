@@ -8,11 +8,14 @@ Azure, and GCP.
 
 Enjoy!
 """
-
+import asyncio
 import os
 import sys
 import argparse
 import re
+import time
+from concurrent.futures import ThreadPoolExecutor
+
 from enum_tools import aws_checks
 from enum_tools import azure_checks
 from enum_tools import gcp_checks
@@ -60,7 +63,7 @@ def parse_arguments():
                         '  Default: enum_tools/fuzz.txt')
 
     parser.add_argument('-t', '--threads', type=int, action='store',
-                        default=5, help='Threads for HTTP brute-force.'
+                        default=os.cpu_count() * 1, help='Threads for HTTP brute-force.'
                         ' Default = 5')
 
     parser.add_argument('-ns', '--nameserver', type=str, action='store',
@@ -202,7 +205,7 @@ def build_names(base_list, mutations):
 
     return names
 
-def main():
+async def main():
     """
     Main program function.
     """
@@ -223,21 +226,26 @@ def main():
     names = build_names(args.keyword, mutations)
 
     # All the work is done in the individual modules
-    try:
-        if not args.disable_aws:
-            aws_checks.run_all(names, args)
-        if not args.disable_azure:
-            azure_checks.run_all(names, args)
-        if not args.disable_gcp:
-            gcp_checks.run_all(names, args)
-    except KeyboardInterrupt:
-        print("Thanks for playing!")
-        sys.exit()
+    loop = asyncio.get_event_loop()
+    with ThreadPoolExecutor(max_workers=os.cpu_count() * 1) as pool:
+        tasks = []
+        try:
+            if not args.disable_aws:
+                tasks.append(loop.create_task(aws_checks.run_all(names, args, pool)))
+            if not args.disable_azure:
+                tasks.append(loop.create_task(azure_checks.run_all(names, args, pool)))
+            if not args.disable_gcp:
+                tasks.append(loop.create_task(gcp_checks.run_all(names, args, pool)))
+        except KeyboardInterrupt:
+            print("Thanks for playing!")
+            sys.exit()
+
+        await asyncio.gather(*tasks)
 
     # Best of luck to you!
     print("\n[+] All done, happy hacking!\n")
-    sys.exit()
+
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())

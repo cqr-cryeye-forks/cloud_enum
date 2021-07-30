@@ -2,7 +2,7 @@
 Azure-specific checks. Part of the cloud_enum package available at
 github.com/initstring/cloud_enum
 """
-
+import asyncio
 import re
 import requests
 from enum_tools import utils
@@ -272,17 +272,24 @@ def check_azure_vms(names, nameserver, threads):
     # Stop the timer
     utils.stop_timer(start_time)
 
-def run_all(names, args):
+async def run_all(names, args, pool):
     """
     Function is called by main program
     """
     print(BANNER)
-
-    valid_accounts = check_storage_accounts(names, args.threads,
-                                            args.nameserver)
+    tasks = []
+    loop = asyncio.get_event_loop()
+    # valid_accounts = check_storage_accounts(names, args.threads, args.nameserver)
+    valid_accounts = await loop.run_in_executor(pool, check_storage_accounts, names, args.threads, args.nameserver)
     if valid_accounts and not args.quickscan:
-        brute_force_containers(valid_accounts, args.brute, args.threads)
+        # brute_force_containers(valid_accounts, args.brute, args.threads)
+        tasks.append(loop.run_in_executor(pool, brute_force_containers, valid_accounts, args.brute, args.threads))
 
-    check_azure_websites(names, args.nameserver, args.threads)
-    check_azure_databases(names, args.nameserver, args.threads)
-    check_azure_vms(names, args.nameserver, args.threads)
+    # check_azure_websites(names, args.nameserver, args.threads)
+    # check_azure_databases(names, args.nameserver, args.threads)
+    # check_azure_vms(names, args.nameserver, args.threads)
+
+    tasks.append(loop.run_in_executor(pool, check_azure_websites, names, args.nameserver, args.threads))
+    tasks.append(loop.run_in_executor(pool, check_azure_databases, names, args.nameserver, args.threads))
+    tasks.append(loop.run_in_executor(pool, check_azure_vms, names, args.nameserver, args.threads))
+    await asyncio.gather(*tasks)

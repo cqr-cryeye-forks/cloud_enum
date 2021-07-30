@@ -2,6 +2,7 @@
 AWS-specific checks. Part of the cloud_enum package available at
 github.com/initstring/cloud_enum
 """
+import asyncio
 
 from enum_tools import utils
 
@@ -118,14 +119,18 @@ def check_awsapps(names, threads, nameserver):
     # Stop the timer
     utils.stop_timer(start_time)
 
-def run_all(names, args):
+async def run_all(names, args, pool):
     """
     Function is called by main program
     """
     print(BANNER)
-
+    tasks = []
+    loop = asyncio.get_event_loop()
     # Use user-supplied AWS region if provided
     #if not regions:
     #    regions = AWS_REGIONS
-    check_s3_buckets(names, args.threads)
-    check_awsapps(names, args.threads, args.nameserver)
+    # check_s3_buckets(names, args.threads)
+    # check_awsapps(names, args.threads, args.nameserver)
+    tasks.append(loop.run_in_executor(pool, check_s3_buckets, names, args.threads))
+    tasks.append(loop.run_in_executor(pool, check_awsapps, names, args.threads, args.nameserver))
+    await asyncio.gather(*tasks)

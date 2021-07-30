@@ -2,6 +2,7 @@
 Google-specific checks. Part of the cloud_enum package available at
 github.com/initstring/cloud_enum
 """
+import asyncio
 
 from enum_tools import utils
 from enum_tools import gcp_regions
@@ -283,13 +284,20 @@ def check_functions(names, brute_list, quickscan, threads):
     # Stop the time
     utils.stop_timer(start_time)
 
-def run_all(names, args):
+async def run_all(names, args, pool):
     """
     Function is called by main program
     """
     print(BANNER)
+    tasks = []
+    loop = asyncio.get_event_loop()
+    # check_gcp_buckets(names, args.threads)
+    # check_fbrtdb(names, args.threads)
+    # check_appspot(names, args.threads)
+    # check_functions(names, args.brute, args.quickscan, args.threads)
 
-    check_gcp_buckets(names, args.threads)
-    check_fbrtdb(names, args.threads)
-    check_appspot(names, args.threads)
-    check_functions(names, args.brute, args.quickscan, args.threads)
+    tasks.append(loop.run_in_executor(pool, check_gcp_buckets, names, args.threads))
+    tasks.append(loop.run_in_executor(pool, check_fbrtdb, names, args.threads))
+    tasks.append(loop.run_in_executor(pool, check_appspot, names, args.threads))
+    tasks.append(loop.run_in_executor(pool, check_functions, names, args.brute, args.quickscan, args.threads))
+    await asyncio.gather(*tasks)
