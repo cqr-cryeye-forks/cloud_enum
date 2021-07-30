@@ -227,7 +227,7 @@ async def main():
 
     # All the work is done in the individual modules
     loop = asyncio.get_event_loop()
-    with ThreadPoolExecutor(max_workers=os.cpu_count() * 1) as pool:
+    with ThreadPoolExecutor(max_workers=os.cpu_count() * 5) as pool:
         tasks = []
         try:
             if not args.disable_aws:
