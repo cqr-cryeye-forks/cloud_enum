@@ -244,6 +244,7 @@ async def main():
 
     # Best of luck to you!
     print("\n[+] All done, happy hacking!\n")
+    sys.exit()
 
 
 

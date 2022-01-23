@@ -117,7 +117,7 @@ def dns_lookup(nameserver, name):
         res.query(name)
         # If no exception is thrown, return the valid name
         return name
-    except dns.resolver.NXDOMAIN:
+    except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
         return ''
     except dns.exception.Timeout:
         print("    [!] DNS Timeout on {}. Investigate if there are many"
